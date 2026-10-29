@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VisionAccess — Multimodal Hands-Free Assistive Interface</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <!-- MediaPipe Face Mesh & Camera CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <!-- Virtual Custom Cursor with Radial Dwell Ring -->
+  <div id="virtual-cursor" class="virtual-cursor">
+    <div class="cursor-dot"></div>
+    <svg class="dwell-svg" viewBox="0 0 50 50">
+      <circle class="dwell-bg" cx="25" cy="25" r="21"></circle>
+      <circle id="dwell-indicator" class="dwell-progress" cx="25" cy="25" r="21"></circle>
+    </svg>
+    <div id="cursor-label" class="cursor-label">Hovering</div>
+  </div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </div>
+        <div>
+          <h1>VisionAccess <span class="tag">HCI Final Year Project</span></h1>
+          <p class="subtitle">Hands-Free Multimodal Assistive Interface for Motor-Impaired Users</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs (Fitts's Law Accessible Hitboxes) -->
+      <nav class="nav-tabs">
+        <button class="interactive-btn nav-tab active" data-tab="tab-aac">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="8" x2="7.01" y2="8"/><line x1="12" y1="8" x2="12.01" y2="8"/><line x1="17" y1="8" x2="17.01" y2="8"/><line x1="7" y1="12" x2="7.01" y2="12"/><line x1="12" y1="12" x2="12.01" y2="12"/><line x1="17" y1="12" x2="17.01" y2="12"/><line x1="7" y1="16" x2="17" y2="16"/></svg>
+          AAC Communicator
+        </button>
+        <button class="interactive-btn nav-tab" data-tab="tab-quick">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/></svg>
+          Quick Needs
+        </button>
+        <button class="interactive-btn nav-tab" data-tab="tab-fitts">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          Fitts's Law Benchmark
+        </button>
+        <button class="interactive-btn nav-tab" data-tab="tab-settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          HCI Parameters
+        </button>
+      </nav>
+
+      <!-- Status indicator -->
+      <div class="tracking-pill" id="camera-status-pill">
+        <span class="status-dot"></span>
+        <span id="camera-status-text">Webcam Initializing...</span>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-layout">
+      <!-- Left Column: Primary Interaction Workspace -->
+      <section class="workspace-panel">
+        
+        <!-- Tab 1: AAC Virtual Keyboard & Speech -->
+        <div id="tab-aac" class="tab-pane active">
+          <div class="speech-output-card">
+            <div class="speech-header">
+              <span class="label">CURRENT STATEMENT (ACCUMULATED MESSAGE)</span>
+              <span class="hint">Hover over letters to dwell-type or blink to confirm</span>
+            </div>
+            <div class="speech-text-display" id="speech-text">_</div>
+            <div class="speech-actions">
+              <button class="interactive-btn action-btn primary" id="btn-speak">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                Speak Aloud (TTS)
+              </button>
+              <button class="interactive-btn action-btn warning" id="btn-backspace">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+                Backspace
+              </button>
+              <button class="interactive-btn action-btn danger" id="btn-clear">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                Clear All
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Phrases Bar -->
+          <div class="quick-phrases-row">
+            <span class="row-label">PREDICTIVE PHRASES:</span>
+            <button class="interactive-btn phrase-chip" data-phrase="Hello, how are you?">"Hello, how are you?"</button>
+            <button class="interactive-btn phrase-chip" data-phrase="Yes, please.">"Yes, please"</button>
+            <button class="interactive-btn phrase-chip" data-phrase="No, thank you.">"No, thank you"</button>
+            <button class="interactive-btn phrase-chip" data-phrase="I feel uncomfortable.">"I feel uncomfortable"</button>
+          </div>
+
+          <!-- Virtual Keypad (Optimized for Fitts's Law Hitboxes) -->
+          <div class="aac-keyboard" id="keyboard-container">
+            <!-- Row 1 -->
+            <div class="key-row">
+              <button class="interactive-btn key-btn" data-key="Q">Q</button>
+              <button class="interactive-btn key-btn" data-key="W">W</button>
+              <button class="interactive-btn key-btn" data-key="E">E</button>
+              <button class="interactive-btn key-btn" data-key="R">R</button>
+              <button class="interactive-btn key-btn" data-key="T">T</button>
+              <button class="interactive-btn key-btn" data-key="Y">Y</button>
+              <button class="interactive-btn key-btn" data-key="U">U</button>
+              <button class="interactive-btn key-btn" data-key="I">I</button>
+              <button class="interactive-btn key-btn" data-key="O">O</button>
+              <button class="interactive-btn key-btn" data-key="P">P</button>
+            </div>
+            <!-- Row 2 -->
+            <div class="key-row">
+              <button class="interactive-btn key-btn" data-key="A">A</button>
+              <button class="interactive-btn key-btn" data-key="S">S</button>
+              <button class="interactive-btn key-btn" data-key="D">D</button>
+              <button class="interactive-btn key-btn" data-key="F">F</button>
+              <button class="interactive-btn key-btn" data-key="G">G</button>
+              <button class="interactive-btn key-btn" data-key="H">H</button>
+              <button class="interactive-btn key-btn" data-key="J">J</button>
+              <button class="interactive-btn key-btn" data-key="K">K</button>
+              <button class="interactive-btn key-btn" data-key="L">L</button>
+            </div>
+            <!-- Row 3 -->
+            <div class="key-row">
+              <button class="interactive-btn key-btn" data-key="Z">Z</button>
+              <button class="interactive-btn key-btn" data-key="X">X</button>
+              <button class="interactive-btn key-btn" data-key="C">C</button>
+              <button class="interactive-btn key-btn" data-key="V">V</button>
+              <button class="interactive-btn key-btn" data-key="B">B</button>
+              <button class="interactive-btn key-btn" data-key="N">N</button>
+              <button class="interactive-btn key-btn" data-key="M">M</button>
+              <button class="interactive-btn key-btn key-wide" data-key=" ">SPACE</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Quick Needs Cards -->
+        <div id="tab-quick" class="tab-pane">
+          <div class="section-intro">
+            <h2>Critical Care & Daily Needs Deck</h2>
+            <p>Designed with maximum visual affordance and high Fitts's Law index of difficulty for rapid selection in emergencies.</p>
+          </div>
+          <div class="emergency-grid">
+            <button class="interactive-btn emergency-card danger" data-announce="Emergency! Please call the nurse immediately.">
+              <div class="card-icon">🚨</div>
+              <div class="card-title">Call Nurse</div>
+              <div class="card-desc">Immediate assistance alert</div>
+            </button>
+            <button class="interactive-btn emergency-card info" data-announce="I need water, please.">
+              <div class="card-icon">💧</div>
+              <div class="card-title">Need Water</div>
+              <div class="card-desc">Hydration request</div>
+            </button>
+            <button class="interactive-btn emergency-card warning" data-announce="I am experiencing severe pain.">
+              <div class="card-icon">⚠️</div>
+              <div class="card-title">Pain Alert</div>
+              <div class="card-desc">Notify doctor of pain level</div>
+            </button>
+            <button class="interactive-btn emergency-card success" data-announce="Please adjust my bed position.">
+              <div class="card-icon">🛏️</div>
+              <div class="card-title">Adjust Bed</div>
+              <div class="card-desc">Ergonomic posture shift</div>
+            </button>
+            <button class="interactive-btn emergency-card info" data-announce="Please turn on or off the lights.">
+              <div class="card-icon">💡</div>
+              <div class="card-title">Toggle Lights</div>
+              <div class="card-desc">Room lighting control</div>
+            </button>
+            <button class="interactive-btn emergency-card neutral" data-announce="I would like to rest now, thank you.">
+              <div class="card-icon">😴</div>
+              <div class="card-title">Want to Rest</div>
+              <div class="card-desc">Minimize room disturbances</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab 3: Fitts's Law Quantitative Usability Benchmark -->
+        <div id="tab-fitts" class="tab-pane">
+          <div class="benchmark-header">
+            <div>
+              <h2>Fitts's Law Usability Evaluator</h2>
+              <p>Formally validates pointing performance: <code>MT = a + b · log₂(2D / W)</code></p>
+            </div>
+            <button class="interactive-btn action-btn primary" id="btn-start-benchmark">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Start 10-Target Experiment
+            </button>
+          </div>
+
+          <div class="benchmark-stage" id="benchmark-stage">
+            <div id="benchmark-instruction" class="benchmark-instruction">
+              Press <strong>"Start 10-Target Experiment"</strong> above. Targets will appear across screen with varying distance (D) and width (W). Select them hands-free via dwell or blink!
+            </div>
+            <div id="benchmark-target" class="interactive-btn benchmark-target hidden"></div>
+          </div>
+
+          <!-- Benchmark Metrics Table -->
+          <div class="benchmark-metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">Completed Trials</div>
+              <div class="metric-value" id="fitts-trials">0 / 10</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Avg Movement Time (MT)</div>
+              <div class="metric-value" id="fitts-avg-time">-- ms</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Avg Index of Difficulty (ID)</div>
+              <div class="metric-value" id="fitts-avg-id">-- bits</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Throughput (TP = ID/MT)</div>
+              <div class="metric-value highlight" id="fitts-throughput">-- bits/s</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: HCI Parameters & Calibration -->
+        <div id="tab-settings" class="tab-pane">
+          <div class="section-intro">
+            <h2>HCI Ergonomic & Filtering Controls</h2>
+            <p>Customize sensor smoothing and thresholding to eliminate the "Midas Touch" and user fatigue.</p>
+          </div>
+
+          <div class="settings-grid">
+            <div class="setting-item">
+              <div class="setting-info">
+                <label>Dwell Activation Duration (ms)</label>
+                <p>Time required to hold gaze on a target to trigger selection (prevents unintended clicks).</p>
+              </div>
+              <div class="setting-ctrl">
+                <input type="range" id="slider-dwell" min="600" max="2500" step="100" value="1200">
+                <span class="ctrl-val" id="val-dwell">1200 ms</span>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <label>Pointer Sensitivity (Gain Factor)</label>
+                <p>Amplifies head movement. Higher values allow complete screen coverage with minimal neck motion.</p>
+              </div>
+              <div class="setting-ctrl">
+                <input type="range" id="slider-sensitivity" min="1.0" max="4.0" step="0.2" value="2.4">
+                <span class="ctrl-val" id="val-sensitivity">2.4x</span>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <label>Exponential Smoothing Factor (Alpha)</label>
+                <p>Low-pass jitter filtration: lower values reduce tremors; higher values improve responsiveness.</p>
+              </div>
+              <div class="setting-ctrl">
+                <input type="range" id="slider-smoothing" min="0.05" max="0.5" step="0.05" value="0.18">
+                <span class="ctrl-val" id="val-smoothing">0.18</span>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <label>Eye Blink Trigger (EAR Threshold)</label>
+                <p>Eye Aspect Ratio threshold below which a deliberate blink is recognized as an immediate click.</p>
+              </div>
+              <div class="setting-ctrl">
+                <input type="range" id="slider-ear" min="0.15" max="0.32" step="0.01" value="0.22">
+                <span class="ctrl-val" id="val-ear">0.22</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Vision Telemetry HUD & Diagnostics -->
+      <aside class="hud-panel">
+        <div class="hud-card camera-card">
+          <div class="hud-card-header">
+            <span class="hud-title">LIVE VISION TELEMETRY</span>
+            <span class="fps-pill" id="fps-counter">30 FPS</span>
+          </div>
+
+          <div class="video-wrapper">
+            <video id="webcam" playsinline autoplay muted></video>
+            <canvas id="face-canvas"></canvas>
+            <div class="crosshair"></div>
+          </div>
+
+          <div class="hud-metrics">
+            <div class="hud-metric-row">
+              <span>Gaze Anchor Point:</span>
+              <strong id="hud-nose-coords">X: --, Y: --</strong>
+            </div>
+            <div class="hud-metric-row">
+              <span>Eye Aspect Ratio (EAR):</span>
+              <strong id="hud-ear-val">0.00</strong>
+            </div>
+            <div class="hud-metric-row">
+              <span>Blink State:</span>
+              <strong id="hud-blink-state" class="state-open">Open</strong>
+            </div>
+            <div class="hud-metric-row">
+              <span>Active Selection Modality:</span>
+              <strong>Dwell + Blink Hybrid</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Academic Viva Reference Card -->
+        <div class="hud-card viva-card">
+          <div class="hud-card-header">
+            <span class="hud-title">ACADEMIC HCI DEFENSE</span>
+          </div>
+          <ul class="viva-points">
+            <li><strong>Fitts's Law:</strong> Validated via target size/distance throughput testing.</li>
+            <li><strong>Midas Touch Problem:</strong> Solved with configurable radial dwell time filter.</li>
+            <li><strong>Fatigue Reduction:</strong> Amplified gain + exponential low-pass filter eliminates neck strain.</li>
+            <li><strong>Multimodal Fallback:</strong> Eye blink (EAR) provides alternative discrete selection channel.</li>
+          </ul>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
